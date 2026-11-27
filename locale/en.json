@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "DeepSeek Web window",
+    "description": "Adds a DeepSeek Web row above the sidebar balance. It opens the real chat.deepseek.com in a small window docked above that row: the user's own account, browser usage limits, no API tokens. The window has reload, open-in-browser and close controls, and a local prompt composer whose three buttons copy a shaped request (thought, agent prompt, short text) for pasting into the web chat. The embedded window exists only in the Desktop app; a browser-only Harness falls back to opening the site in a tab.",
+    "detail": "docs/DETAIL.md"
+  }
+}
