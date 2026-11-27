@@ -1,13 +1,14 @@
 # DeepSeek Web window
 
 The row sits in the sidebar footer, directly above **Баланс**, and opens the real
-`chat.deepseek.com` in a small window anchored above itself — next to the conversation.
+`chat.deepseek.com` in a compact window above itself: as wide as the sidebar, resizable from its
+right edge, with only a reload / open-in-browser / close header around the page.
 
 ## Why it exists
 
-A short question to the main agent costs the whole context window it rides on. The browser
-version of DeepSeek answers the same trivia for web usage limits instead of API tokens and
-without touching the session at all.
+A short question to the main agent costs the whole context window it rides on. The browser version
+of DeepSeek answers the same trivia for web usage limits instead of API tokens and without touching
+the session at all.
 
 ## Using it
 
@@ -16,15 +17,14 @@ without touching the session at all.
 3. Header: **↻** reloads (and rebuilds a failed page), **↗** opens the site in the system browser,
    **×** closes the window; Escape closes it while focus is on the window's own controls.
    Links the page opens in a new window stay inside this window, keeping its sign-in.
-4. Footer: type a rough thought, then press one of the shaping buttons.
-   **Мысль** states it precisely, **Промпт** turns it into a structured prompt for a coding agent,
-   **Текст** asks for a short neutral text. Each button copies the composed request; paste it into
-   the DeepSeek page with Ctrl+V.
+4. Drag the right edge to resize; double-click the edge to return to the sidebar width. The chosen
+   width is remembered across reloads.
 
 ## Limits
 
-- Desktop app only. In a browser-only Harness the button opens the site in a tab.
+- Desktop app only. In a browser-only Harness the row opens the site in a tab.
 - Sign-in lasts one app run: the guest uses a temporary browser profile.
 - Popups, downloads and permission prompts are blocked by the desktop guest policy.
-- Nothing is stored: no conversation, no drafts, no settings.
+- The page itself stores whatever the site stores; the plugin adds no data of its own except the
+  remembered width.
 - DeepSeek's web app can change without notice; this plugin embeds it as-is.

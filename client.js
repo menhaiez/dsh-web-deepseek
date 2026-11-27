@@ -9,69 +9,33 @@ window.__ModuleLoader__.load({
     const SITE = 'https://chat.deepseek.com/'
     /** One storage account per process, shared by every open/close of this window. */
     const STORAGE = 'web-deepseek'
+    /** Remembered window width, so a resized window survives reloads. */
+    const WIDTH_KEY = 'web-deepseek:width'
 
     const STRINGS = {
       ru: {
         title: 'DeepSeek Web',
-        caption: 'не API',
         open: 'Открыть DeepSeek Web',
         close: 'Закрыть',
         reload: 'Перезагрузить страницу',
         external: 'Открыть в системном браузере',
+        resize: 'Потяните, чтобы изменить ширину. Двойной клик — по ширине панели.',
         loading: 'Загружаю страницу…',
         failed: 'Не удалось загрузить страницу',
         unsupported: 'Встроенное окно работает только в приложении Harness Desktop.',
         openExternal: 'Открыть в браузере',
-        idea: 'Ваша мысль или черновик…',
-        copyLabel: 'Скопировать готовый запрос',
-        chips: {
-          thought: 'Мысль',
-          prompt: 'Промпт',
-          text: 'Текст',
-        },
-        hint: 'и вставьте в окно DeepSeek (Ctrl+V)',
-        empty: 'Сначала напишите мысль.',
-        copied: 'Скопировано — вставьте в окно DeepSeek (Ctrl+V).',
-        copyFailed: 'Не удалось скопировать. Попробуйте ещё раз.',
-        notice: 'Вход — один раз за запуск приложения: окно использует временный профиль браузера.',
-        templates: {
-          thought: (x) => 'Сформулируй одну мысль точно и коротко, без вступлений и без воды.\n\nМысль: ' + x,
-          prompt: (x) => 'Ты — редактор промптов. Преврати мою мысль в точный промпт для агента-программиста.\n'
-            + 'Структура: роль, контекст, задача, ограничения, ожидаемый результат, формат ответа.\n'
-            + 'Верни только промпт, без пояснений вокруг.\n\nМоя мысль: ' + x,
-          text: (x) => 'Напиши короткий текст объёмом 3–5 предложений, нейтральный тон, без клише и без вступлений.\n\nСуть: ' + x,
-        },
       },
       en: {
         title: 'DeepSeek Web',
-        caption: 'no API',
         open: 'Open DeepSeek Web',
         close: 'Close',
         reload: 'Reload the page',
         external: 'Open in the system browser',
+        resize: 'Drag to change the width. Double-click for the sidebar width.',
         loading: 'Loading the page…',
         failed: 'The page failed to load',
         unsupported: 'The embedded window works only in the Harness Desktop app.',
         openExternal: 'Open in browser',
-        idea: 'Your thought or draft…',
-        copyLabel: 'Copy a ready request',
-        chips: {
-          thought: 'Thought',
-          prompt: 'Prompt',
-          text: 'Text',
-        },
-        hint: 'and paste it into the DeepSeek window (Ctrl+V)',
-        empty: 'Write a thought first.',
-        copied: 'Copied — paste it into the DeepSeek window (Ctrl+V).',
-        copyFailed: 'Copy failed. Try again.',
-        notice: 'Sign-in lasts one app run: the window uses a temporary browser profile.',
-        templates: {
-          thought: (x) => 'State one thought precisely and briefly, with no preamble and no filler.\n\nThought: ' + x,
-          prompt: (x) => 'You are a prompt editor. Turn my thought into a precise prompt for a coding agent.\n'
-            + 'Structure: role, context, task, constraints, expected result, response format.\n'
-            + 'Return only the prompt, with no commentary around it.\n\nMy thought: ' + x,
-          text: (x) => 'Write a short text of 3–5 sentences, neutral tone, no clichés, no preamble.\n\nEssence: ' + x,
-        },
       },
     }
 
@@ -105,27 +69,20 @@ window.__ModuleLoader__.load({
 
     const clamp = (min, max, value) => Math.max(min, Math.min(max, value))
 
-    const copyText = async (text) => {
+    const savedWidth = () => {
       try {
-        await navigator.clipboard.writeText(text)
-        return true
+        const value = Number(localStorage.getItem(WIDTH_KEY))
+        return Number.isFinite(value) && value >= 220 ? value : undefined
       } catch (error) {
-        try {
-          const area = document.createElement('textarea')
-          area.value = text
-          area.setAttribute('readonly', '')
-          area.style.position = 'fixed'
-          area.style.top = '0'
-          area.style.left = '0'
-          area.style.opacity = '0'
-          document.body.appendChild(area)
-          area.select()
-          const ok = document.execCommand('copy')
-          area.remove()
-          return ok
-        } catch (fallbackError) {
-          return false
-        }
+        return undefined
+      }
+    }
+    const rememberWidth = (value) => {
+      try {
+        if (value === undefined) localStorage.removeItem(WIDTH_KEY)
+        else localStorage.setItem(WIDTH_KEY, String(Math.round(value)))
+      } catch (error) {
+        /* Storage can be unavailable; the window still works for this run. */
       }
     }
 
@@ -150,7 +107,6 @@ window.__ModuleLoader__.load({
       .wd-row:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-alias-border-selected);outline-offset:-1px}
       .wd-row[data-open='true']{background:var(--dsw-alias-interactive-bg-hover)}
       .wd-row-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-      .wd-row-note{flex:none;font-size:11px;color:var(--dsw-alias-label-tertiary);white-space:nowrap}
       .wd-row[data-wide='false']{width:auto;flex:0 0 auto;flex-direction:column;justify-content:center;gap:2px;
         min-height:40px;padding:4px 6px}
       .wd-panel{position:fixed;z-index:60;display:flex;flex-direction:column;overflow:hidden;
@@ -169,28 +125,15 @@ window.__ModuleLoader__.load({
       .wd-icon:focus-visible{outline:2px solid var(--dsw-alias-border-selected);outline-offset:-1px}
       .wd-body{position:relative;flex:1 1 auto;min-height:0;background:var(--dsw-alias-bg-base)}
       .wd-body webview{display:flex;width:100%;height:100%}
-      .wd-loading{position:absolute;inset:0;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;
-        padding:20px;text-align:center;pointer-events:none;color:var(--dsw-alias-label-secondary);font-size:12.5px;
-        background:var(--dsw-alias-bg-base)}
-      .wd-loading small{font-size:11px;line-height:1.4;color:var(--dsw-alias-label-tertiary);max-width:280px}
+      .wd-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;
+        pointer-events:none;color:var(--dsw-alias-label-secondary);font-size:12.5px;background:var(--dsw-alias-bg-base)}
       .wd-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
         gap:10px;padding:20px;text-align:center;font-size:12.5px;color:var(--dsw-alias-label-secondary)}
-      .wd-foot{position:relative;flex:none;display:flex;flex-direction:column;gap:6px;padding:8px;
-        border-top:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2)}
-      .wd-input{width:100%;box-sizing:border-box;resize:none;height:46px;padding:6px 8px;border-radius:8px;
-        border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);
-        font:inherit;font-size:12.5px;line-height:1.35}
-      .wd-input:focus{outline:none;border-color:var(--dsw-alias-border-selected)}
-      .wd-copy-label{font-size:11px;color:var(--dsw-alias-label-tertiary)}
-      .wd-chips{display:flex;gap:6px}
-      .wd-chip{flex:1 1 0;height:26px;border-radius:7px;border:1px solid var(--dsw-alias-border-l2);
+      .wd-action{height:26px;padding:0 12px;border-radius:7px;border:1px solid var(--dsw-alias-border-l2);
         background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer}
-      .wd-chip:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}
-      .wd-chip:focus-visible{outline:2px solid var(--dsw-alias-border-selected);outline-offset:-1px}
-      .wd-hint{font-size:11px;line-height:1.35;color:var(--dsw-alias-label-tertiary)}
-      .wd-toast{position:absolute;left:8px;right:8px;bottom:calc(100% + 6px);padding:6px 8px;border-radius:7px;
-        border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);color:var(--dsw-alias-label-primary);
-        font-size:12px;line-height:1.35;pointer-events:none}
+      .wd-action:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}
+      .wd-grip{position:absolute;top:0;right:0;bottom:0;width:7px;cursor:col-resize;z-index:2;touch-action:none}
+      .wd-grip:hover{background:var(--dsw-alias-border-l2)}
     `
 
     const glyph = (children) => h('svg', {
@@ -336,17 +279,15 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * @param props - measured placement above the footer row and the close callback.
+     * @param props - measured placement above the footer row, the close callback and the resize starter.
      * @returns the compact DeepSeek web window.
      */
-    function WebWindow({ anchor, onClose }) {
+    function WebWindow({ anchor, onClose, onResizeStart, onResizeReset }) {
       useLanguageRevision()
       const hostRef = useRef(null)
       const panelRef = useRef(null)
       const [status, setStatus] = useState('loading')
       const [nonce, setNonce] = useState(0)
-      const [idea, setIdea] = useState('')
-      const [toast, setToast] = useState()
       const view = useSiteGuest(hostRef, setStatus, nonce)
 
       useLayoutEffect(() => {
@@ -356,26 +297,6 @@ window.__ModuleLoader__.load({
           console.error('[web-deepseek] focus failed', error)
         }
       }, [])
-
-      useEffect(() => {
-        if (toast === undefined) return undefined
-        const timer = setTimeout(() => setToast(undefined), 2600)
-        return () => clearTimeout(timer)
-      }, [toast])
-
-      const say = (message) => {
-        setToast({ message })
-      }
-
-      const compose = async (kind) => {
-        const text = idea.trim()
-        if (text === '') {
-          say(t().empty)
-          return
-        }
-        const ok = await copyText(t().templates[kind](text))
-        say(ok ? t().copied : t().copyFailed)
-      }
 
       const reload = () => {
         if (status === 'failed' || view.current === undefined) {
@@ -431,40 +352,29 @@ window.__ModuleLoader__.load({
       ),
       h('div', { className: 'wd-body' },
         h('div', { ref: hostRef, style: { position: 'absolute', inset: 0 } }),
-        status === 'loading'
-          ? h('div', { className: 'wd-loading' }, h('div', null, t().loading), h('small', null, t().notice))
-          : null,
+        status === 'loading' ? h('div', { className: 'wd-loading' }, t().loading) : null,
         status === 'unsupported' || status === 'failed'
           ? h('div', { className: 'wd-fallback' },
             h('div', null, status === 'unsupported' ? t().unsupported : t().failed),
             h('button', {
-              type: 'button', className: 'wd-chip', style: { flex: 'none', padding: '0 12px' },
+              type: 'button', className: 'wd-action',
               onClick: () => openExternally(),
             }, t().openExternal))
           : null,
       ),
-      h('div', { className: 'wd-foot' },
-        toast === undefined ? null : h('div', { className: 'wd-toast', role: 'status' }, toast.message),
-        h('textarea', {
-          className: 'wd-input',
-          placeholder: t().idea,
-          value: idea,
-          spellCheck: false,
-          onChange: (event) => setIdea(event.target.value),
-        }),
-        h('div', { className: 'wd-copy-label' }, t().copyLabel),
-        h('div', { className: 'wd-chips' },
-          h('button', { type: 'button', className: 'wd-chip', onClick: () => { void compose('thought') } }, t().chips.thought),
-          h('button', { type: 'button', className: 'wd-chip', onClick: () => { void compose('prompt') } }, t().chips.prompt),
-          h('button', { type: 'button', className: 'wd-chip', onClick: () => { void compose('text') } }, t().chips.text),
-        ),
-        h('div', { className: 'wd-hint' }, t().hint),
-      ),
+      h('div', {
+        className: 'wd-grip',
+        title: t().resize,
+        'aria-hidden': true,
+        onPointerDown: onResizeStart,
+        onDoubleClick: onResizeReset,
+      }),
       )
     }
 
     /**
-     * Footer row above the balance chip; the window hugs it from above.
+     * Footer row above the balance chip; the window hugs it from above and matches the
+     * sidebar's own width until the user drags its right edge.
      * @param props - sidebar geometry.
      * @returns the trigger and, while open, the web window.
      */
@@ -482,6 +392,15 @@ window.__ModuleLoader__.load({
         return () => clearTimeout(timer)
       }, [unavailableNotice])
 
+      const sidebarWidth = () => {
+        const row = rowRef.current
+        if (row === null) return undefined
+        const host = row.parentElement ?? row
+        const rect = host.getBoundingClientRect()
+        if (rect.width >= 200) return Math.round(rect.width)
+        return Math.round(row.getBoundingClientRect().width + 16)
+      }
+
       useLayoutEffect(() => {
         if (!open) return undefined
         let placed = false
@@ -495,11 +414,13 @@ window.__ModuleLoader__.load({
             return
           }
           placed = true
-          const width = clamp(320, 440, Math.round(window.innerWidth * 0.32))
-          const available = Math.max(240, rect.top - 24)
-          const height = Math.min(clamp(360, 620, Math.round(window.innerHeight * 0.68)), available)
+          const host = row.parentElement ?? row
+          const hostRect = host.getBoundingClientRect()
+          const width = clamp(220, 900, savedWidth() ?? Math.round(hostRect.width) ?? rect.width)
+          const available = Math.max(260, rect.top - 16)
+          const height = Math.min(clamp(360, 860, Math.round(window.innerHeight * 0.78)), available)
           setAnchor({
-            left: clamp(8, window.innerWidth - width - 8, Math.round(rect.left)),
+            left: Math.max(0, Math.round(hostRect.left)),
             bottom: Math.max(8, window.innerHeight - rect.top + 8),
             width,
             height,
@@ -517,6 +438,40 @@ window.__ModuleLoader__.load({
           observer?.disconnect()
         }
       }, [open])
+
+      const startResize = (event) => {
+        if (anchor === undefined) return
+        event.preventDefault()
+        const handle = event.currentTarget
+        try {
+          handle.setPointerCapture(event.pointerId)
+        } catch (error) {
+          /* Capture is best effort; without it the drag stops over the guest. */
+        }
+        const startX = event.clientX
+        const startWidth = anchor.width
+        let width = startWidth
+        const move = (moveEvent) => {
+          width = clamp(220, 900, Math.round(startWidth + (moveEvent.clientX - startX)))
+          setAnchor((current) => (current === undefined ? current : { ...current, width }))
+        }
+        const finish = () => {
+          window.removeEventListener('pointermove', move)
+          window.removeEventListener('pointerup', finish)
+          window.removeEventListener('pointercancel', finish)
+          rememberWidth(width)
+        }
+        window.addEventListener('pointermove', move)
+        window.addEventListener('pointerup', finish)
+        window.addEventListener('pointercancel', finish)
+      }
+
+      const resetWidth = () => {
+        rememberWidth(undefined)
+        const width = sidebarWidth()
+        if (width === undefined) return
+        setAnchor((current) => (current === undefined ? current : { ...current, width }))
+      }
 
       const toggle = () => {
         if (desktopBridge() === undefined) {
@@ -544,7 +499,6 @@ window.__ModuleLoader__.load({
         },
         globeIcon(),
         wide ? h('span', { className: 'wd-row-label' }, t().title) : null,
-        wide ? h('span', { className: 'wd-row-note' }, t().caption) : null,
         ),
         unavailableNotice === 0 ? null : h('span', {
           key: unavailableNotice,
@@ -555,7 +509,7 @@ window.__ModuleLoader__.load({
             color: 'var(--dsw-alias-label-primary)', fontSize: 12, pointerEvents: 'none', maxWidth: 280,
           },
         }, t().unsupported),
-        open ? h(WebWindow, { anchor, onClose }) : null,
+        open ? h(WebWindow, { anchor, onClose, onResizeStart: startResize, onResizeReset: resetWidth }) : null,
       )
     }
 
