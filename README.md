@@ -7,6 +7,8 @@ It is the real `chat.deepseek.com` with your own account: trivial questions spen
 limits instead of API tokens** and never enter the agent's conversation, so they cannot inflate the
 context (and the bill) of the session you are working in.
 
+![The DeepSeek Web window above the balance row](docs/screenshot.png)
+
 ## What you get
 
 - A `DeepSeek Web` row in the sidebar footer, directly above the balance chip, in the wide sidebar
