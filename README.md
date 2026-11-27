@@ -39,14 +39,23 @@ A browser-only Harness has no such bridge, so there the row opens the site in a 
 
 ## Install
 
-Clone this repository, then install the directory as a bundle:
+**From GitHub, one command** (the bundle installs straight from this repository and is pinned to a
+commit):
 
-1. **Settings → Plugins → Add plugin → Install from directory** and pick the checkout.
-2. Reload the page (Application menu → **Reload Page**) or restart the app.
-3. The row appears above the balance. Click it and sign in once.
+```sh
+dsh plugin --profile desktop add github:menhaiez/dsh-web-deepseek
+```
 
-From a published npm package the same bundle installs by name, for example
-`dsh plugin --profile desktop add dsh-web-deepseek`.
+**From a checkout** (no npm required):
+
+1. Clone this repository.
+2. **Settings → Plugins → Add plugin → Install from directory** and pick the checkout.
+
+Either way, reload the page afterwards (Application menu → **Reload Page**) or restart the app.
+The row appears above the balance; click it and sign in once.
+
+The package is not published on npm yet; when it is, `dsh plugin --profile desktop add
+dsh-web-deepseek` will work as well.
 
 ## Limits
 

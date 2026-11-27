@@ -4,6 +4,14 @@
   "description": "DeepSeek Web in a small window above the sidebar balance: your own account, browser usage limits, no API tokens.",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/menhaiez/dsh-web-deepseek.git"
+  },
+  "homepage": "https://github.com/menhaiez/dsh-web-deepseek#readme",
+  "bugs": {
+    "url": "https://github.com/menhaiez/dsh-web-deepseek/issues"
+  },
   "keywords": [
     "dsh-plugin",
     "deepseek",
